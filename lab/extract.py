@@ -8,23 +8,14 @@ from __future__ import print_function
 
 import argparse
 import sys
-from pathlib import Path
 
+import tqdm
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops.data_flow_ops import FIFOQueue
 
 import facenet
 import util
-
-
-def get_output_path(feature_out_path_, image_path_, lfw_dir_):
-    relevant_feat_path = Path(image_path_).relative_to(lfw_dir_).with_suffix('.npy')
-    output_path = Path(feature_out_path_).joinpath(relevant_feat_path)
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    return str(output_path)
 
 
 def main(args):
@@ -78,17 +69,16 @@ def main(args):
         embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
 
         # Run forward pass to calculate embeddings
-        print('Runnning forward pass on LFW images')
+        print(f'Running forward pass on {args.dataset_type} ... ')
         sess.run(eval_enqueue_op, {image_paths_placeholder: image_paths_array, labels_placeholder: labels_array,
                                    control_placeholder: control_array})
 
         # Run forward pass to save embeddings
-        for image_path in image_paths:
+        for image_path in tqdm.tqdm(image_paths):
             feed_dict = {phase_train_placeholder: False, batch_size_placeholder: args.batch_size}
             emb, lab = sess.run([embeddings, label_batch], feed_dict=feed_dict)
-            out_path = get_output_path(args.feature_out_path, image_path, args.dataset_root)
-            print(out_path)
-            np.save(out_path, emb)
+            out_path = util.get_output_path(args.feature_out_path, image_path, args.dataset_root)
+            util.write_feat(out_path, emb, args.dataset_type)
 
         coord.request_stop()
         coord.join(threads)
@@ -103,6 +93,8 @@ def parse_arguments(argv):
                         help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file')
     parser.add_argument('feature_out_path', type=str,
                         help='Path to output features')
+    parser.add_argument('dataset_type', type=str, choices=['IJBC', 'MEGA'],
+                        help='Select IJBC or MegaFace dataset (for facescrub, choose `mega`)')
     parser.add_argument('--batch_size', type=int,
                         help='Number of images to process in a batch in the LFW test set.', default=1)
     parser.add_argument('--image_size', type=int,
