@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.python.ops.data_flow_ops import FIFOQueue
 
 import facenet
-import util
+from utils import FeatIO
 
 
 def main(args):
@@ -45,9 +45,12 @@ def main(args):
     # Step 2: load images and initialize batches
     # ========================================================================================
 
+    # Initiate feature writer handler
+    feat_writer = FeatIO.FeatureWriter(args.dataset_type)
+
     # Get the paths for the corresponding images
     print("Scanning images in dataset... ")
-    image_paths = util.get_image_paths(args.dataset_root)
+    image_paths = FeatIO.get_image_paths(args.dataset_root)
 
     # Enqueue one epoch of image paths and labels
     labels_array = np.expand_dims(np.arange(0, len(image_paths)), 1)
@@ -77,8 +80,8 @@ def main(args):
         for image_path in tqdm.tqdm(image_paths):
             feed_dict = {phase_train_placeholder: False, batch_size_placeholder: args.batch_size}
             emb, lab = sess.run([embeddings, label_batch], feed_dict=feed_dict)
-            out_path = util.get_output_path(args.feature_out_path, image_path, args.dataset_root)
-            util.write_feat(out_path, emb, args.dataset_type)
+            out_path = feat_writer.get_output_path(args.feature_out_path, image_path, args.dataset_root)
+            feat_writer.write_feat(out_path, emb)
 
         coord.request_stop()
         coord.join(threads)
@@ -93,7 +96,7 @@ def parse_arguments(argv):
                         help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file')
     parser.add_argument('feature_out_path', type=str,
                         help='Path to output features')
-    parser.add_argument('dataset_type', type=str, choices=['IJBC', 'MEGA'],
+    parser.add_argument('dataset_type', type=str.upper, choices=['IJBC', 'MEGA'],
                         help='Select IJBC or MegaFace dataset (for facescrub, choose `mega`)')
     parser.add_argument('--batch_size', type=int,
                         help='Number of images to process in a batch in the LFW test set.', default=1)
