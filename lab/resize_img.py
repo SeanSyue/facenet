@@ -1,3 +1,7 @@
+"""
+DEPRECATED
+Manually resize images in dataset root and save resized copies
+"""
 from functools import partial
 from pathlib import Path
 from multiprocessing import Pool
