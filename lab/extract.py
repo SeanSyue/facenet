@@ -15,7 +15,7 @@ import tensorflow as tf
 from tensorflow.python.ops.data_flow_ops import FIFOQueue
 
 import facenet
-from utils import FeatIO
+from utils import FeatIO, Operations
 
 
 def main(args):
@@ -37,9 +37,9 @@ def main(args):
         image_size = (args.image_size, args.image_size)
         eval_enqueue_op = eval_input_queue.enqueue_many(
             [image_paths_placeholder, labels_placeholder, control_placeholder], name='eval_enqueue_op')
-        image_batch, label_batch = facenet.create_input_pipeline(eval_input_queue, image_size,
-                                                                 args.nrof_preprocess_threads,
-                                                                 batch_size_placeholder)
+        image_batch, label_batch = Operations.create_input_pipeline(eval_input_queue, image_size,
+                                                                    args.nrof_preprocess_threads,
+                                                                    batch_size_placeholder)
 
     # ========================================================================================
     # Step 2: load images and initialize batches
