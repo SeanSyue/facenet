@@ -45,9 +45,6 @@ def main(args):
     # Step 2: load images and initialize batches
     # ========================================================================================
 
-    # Initiate feature writer handler
-    feat_writer = FeatIO.FeatureWriter(args.dataset_type)
-
     # Get the paths for the corresponding images
     print("Scanning images in dataset... ")
     image_paths = FeatIO.get_image_paths(args.dataset_root)
@@ -72,7 +69,7 @@ def main(args):
         embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
 
         # Run forward pass to calculate embeddings
-        print(f'Running forward pass on {args.dataset_type} ... ')
+        print(f'Running forward pass ... ')
         sess.run(eval_enqueue_op, {image_paths_placeholder: image_paths_array, labels_placeholder: labels_array,
                                    control_placeholder: control_array})
 
@@ -80,8 +77,8 @@ def main(args):
         for image_path in tqdm.tqdm(image_paths):
             feed_dict = {phase_train_placeholder: False, batch_size_placeholder: args.batch_size}
             emb, lab = sess.run([embeddings, label_batch], feed_dict=feed_dict)
-            out_path = feat_writer.get_output_path(args.feature_out_path, image_path, args.dataset_root)
-            feat_writer.write_feat(out_path, emb)
+            out_path = FeatIO.get_output_path(args.feature_out_path, image_path, args.dataset_root)
+            np.save(out_path, emb)
 
         coord.request_stop()
         coord.join(threads)
@@ -96,8 +93,6 @@ def parse_arguments(argv):
                         help='Could be either a directory containing the meta_file and ckpt_file or a model protobuf (.pb) file')
     parser.add_argument('feature_out_path', type=str,
                         help='Path to output features')
-    parser.add_argument('dataset_type', type=str.upper, choices=['IJBC', 'MEGA'],
-                        help='Select IJBC or MegaFace dataset (for facescrub, choose `mega`)')
     parser.add_argument('--batch_size', type=int,
                         help='Number of images to process in a batch in the LFW test set.', default=1)
     parser.add_argument('--image_size', type=int,
